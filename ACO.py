@@ -24,15 +24,6 @@ def parseTextFile():
     return securityVanCapacity, valueList, weightList
 
 
-#def printMatrix(matrix: list[list[int]]) -> None:
-#    """Function for printing the matrix"""
-#
-#    for row in matrix:
-#        print(row)
-#
-#    return
-
-
 def getCeilValue(arr: list, val: float) -> int:
     """Function to get the ceil value for any probability val"""
 
