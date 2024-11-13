@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-import time
 
 
 def parseTextFile():
@@ -24,20 +23,22 @@ def parseTextFile():
     return securityVanCapacity, valueList, weightList
 
 
-def getCeilValue(arr: list, val: float) -> int:
+def getCeilValue(arr: list, valueToSearch: float) -> int:
     """Function to get the ceil value for any probability val"""
 
     left = 0
     right = len(arr)
 
+    # Use binary search to search for the value
     while left < right :     
         mid = left + ((right - left) >> 1)
-        if val > arr[mid] : 
+        if valueToSearch > arr[mid] : 
             left = mid + 1
         else : 
             right = mid 
-      
-    if arr[left] >= val : 
+    
+    # Return the value just above the value
+    if arr[left] >= valueToSearch : 
         return left
     else : 
         return -1
@@ -46,6 +47,7 @@ def getCeilValue(arr: list, val: float) -> int:
 def updateProbability(probList: list, pheromoneList: list, alpha: int, heuristicList: list, beta: int) -> list:
     """Function to update the probability list according the pheromone and heuristic"""
 
+    # Update the probability based on the pheromone and heuristic list, using alpha and beta parameters
     probList = np.power(pheromoneList, alpha) * np.power(heuristicList, beta)
     probList = probList / np.sum(probList)
     return probList
@@ -66,60 +68,50 @@ def getCummulativeProbability(probList: list) -> list:
 # Main function
 def main():
 
-    startTime = time.time()
+    print("Ant Colony Optimisation")
 
-    # Parameters to be changed
-    numberOfIterations = 10000
-    numberOfAnts = 500
+    totalFitnessIterations = 10000
+    
+    # Parameters to be tested via experiments
+    populationSize = 50 # population size, p
+    m = 5 # amount of pheromone deposited according to fitness
+    rho = 0.7 # evaporation rate, e
 
     # Fixed parameters for calculating probability
-    alpha = 1
-    beta = 2
-    rho = 0.8
+    alpha = 2
+    beta = 4
 
     # Store the values from the text file
     securityVanCapacity, valueList, weightList = parseTextFile()
-    
-    print("Security van capacity:", securityVanCapacity)
-    print("Weight list size:", len(weightList))
-    print("Value list size:", len(valueList))
 
     # Number of cities or weights
     numOfCities = len(weightList)
-
-    # Distance matrix
-    distanceMatrix = [[0]*numOfCities for _ in range(numOfCities)]
-
-    # Construct the distanceMatrix from weightList
-    for r in range(numOfCities):
-        for c in range(numOfCities):
-            if r <= c:
-                distanceMatrix[r][c] = weightList[c] / valueList[c]
-
-    for r in range(numOfCities):
-        for c in range(numOfCities):
-            distanceMatrix[c][r] = distanceMatrix[r][c]
 
     # Pheromone matrix, initialise with 1
     pheromoneList = [1]*numOfCities
 
     citiesInAntTour = []
     chosenWeightsList = []
-    currMax = 0.0
-    currWeight = 0.0
-    currVal = 0.0
+    currentMax = 0.0
+    currentWeight = 0.0
+    currentVal = 0.0
+
+    cummulativeValueList = []
+    cummulativeValueMatrix = []
 
     maxValuesOfAllIters = []
 
+    iterCount = 1
+
     # Main loop start
-    for _ in range(int(numberOfIterations/numberOfAnts)):
+    for _ in range(int(totalFitnessIterations/populationSize)):
 
         # Pheromone list
         pheromoneList = [1]*numOfCities
-        currMax = 0.0
+        currentMax = 0.0
 
         # Loop for the ants
-        for _ in range(numberOfAnts):
+        for _ in range(populationSize):
             
             # Heuristic matrix
             heuristicList = [round(valueList[i] / weightList[i], 4) for i in range(numOfCities)]
@@ -129,20 +121,24 @@ def main():
             # Clear the values initially
             citiesInAntTour.clear()
             chosenWeightsList.clear()
-            currWeight = 0.0
-            currVal = 0.0
+            currentWeight = 0.0
+            currentVal = 0.0
+            cummulativeValueList.clear()
 
             # Loop to fill van until full
-            while currWeight < securityVanCapacity:
+            while currentWeight < securityVanCapacity:
                 
                 # Get random value from 0 to 1
                 randomVal = random.uniform(0, 1)
                 val = getCeilValue(cummulativeProbList, randomVal)
                 
-                if currWeight + weightList[val] <= securityVanCapacity:
+                # Check if the weight can be put in the security van
+                # If yes, then choose the weight and update the heuristic value of it to 0
+                # Update the current value of weights and valuables
+                if currentWeight + weightList[val] <= securityVanCapacity:
                     heuristicList[val] = 0
-                    currWeight = currWeight + weightList[val]
-                    currVal = currVal + valueList[val]
+                    currentWeight = currentWeight + weightList[val]
+                    currentVal = currentVal + valueList[val]
                     citiesInAntTour.append(val)
                     chosenWeightsList.append(weightList[val])
                 else:
@@ -151,36 +147,39 @@ def main():
                 # Update transition probability to another city
                 probList = updateProbability(probList, pheromoneList, alpha, heuristicList, beta)
                 cummulativeProbList = getCummulativeProbability(probList)
-            
+
+                cummulativeValueList.append(currentVal)
+        
+            cummulativeValueMatrix.append(cummulativeValueList[:])
+
             # Update pheromone after ant traversal
             pheromoneList = np.multiply(pheromoneList, 1-rho)
             for city in citiesInAntTour:
-                pheromoneList[city] = pheromoneList[city] + (1/np.sum(chosenWeightsList))
+                pheromoneList[city] = pheromoneList[city] + (m/np.sum(chosenWeightsList))
 
             # Get the maximum value
-            currMax = max(currMax, currVal)
-            maxValuesOfAllIters.append(currMax)
+            currentMax = max(currentMax, currentVal)
+            maxValuesOfAllIters.append(currentMax)
+            iterCount = iterCount+1
 
-    endTime = time.time()
-    print("Time taken to execute:", endTime - startTime)
 
     print("Maximum value after all the interations:", np.max(maxValuesOfAllIters))
     
+    maxValuesAfter50Iterations = []
+
+    for i in range(50):
+        maxValuesAfter50Iterations.append(cummulativeValueMatrix[i][-1])
+
+    print("Average value after 50 iterations:", np.average(maxValuesAfter50Iterations))
+
+
     # Plot the graph
     plt.title("Ant Colony Optimization")
-    plt.plot(range(numberOfIterations), maxValuesOfAllIters)
-    plt.xlabel("Number of Iterations")
-    plt.ylabel("Total value of weights in van (Pounds)")
-    plt.savefig("alpha"+str(alpha)+"_"+"beta"+str(beta)+"_"+"rho"+str(rho)+"_"+"ants"+str(numberOfAnts)+".png")
+    plt.plot(range(len(maxValuesAfter50Iterations)), maxValuesAfter50Iterations, marker='o')
+    plt.xlabel("Number of Iterations",fontsize=18)
+    plt.ylabel("Maximum value of weights (Pounds)",fontsize=18)
+    plt.grid()
     plt.show()  
-
-    with open("Results.txt", 'a') as file:
-        file.write("Number of iterations: "+ str(numberOfIterations)+"\n")
-        file.write("Number of ants: "+ str(numberOfAnts)+"\n")
-        file.write("Alpha: "+ str(alpha)+"\n")
-        file.write("Beta: "+ str(beta)+"\n")
-        file.write("Rho: "+ str(rho)+"\n")
-        file.write("Maximum value after all the iterations: "+ str(np.max(maxValuesOfAllIters))+"\n")
 
     return
 
