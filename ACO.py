@@ -70,11 +70,12 @@ def main():
 
     print("Ant Colony Optimisation")
 
+    # Total number of fitness evaluations
     totalFitnessIterations = 10000
     
     # Parameters to be tested via experiments
     populationSize = 50 # population size, p
-    m = 5 # amount of pheromone deposited according to fitness
+    m = 1.0 # amount of pheromone deposited according to fitness
     rho = 0.7 # evaporation rate, e
 
     # Fixed parameters for calculating probability
@@ -90,17 +91,22 @@ def main():
     # Pheromone matrix, initialise with 1
     pheromoneList = [1]*numOfCities
 
+    # Index of cities in the tour
     citiesInAntTour = []
-    chosenWeightsList = []
     currentMax = 0.0
     currentWeight = 0.0
     currentVal = 0.0
 
+    # Cummulative value of the bag in one iteration
     cummulativeValueList = []
+
+    # Cummulative values of the bag in all iterations
     cummulativeValueMatrix = []
 
+    # Max values of iterations
     maxValuesOfAllIters = []
 
+    # Iteration count
     iterCount = 1
 
     # Main loop start
@@ -120,7 +126,6 @@ def main():
 
             # Clear the values initially
             citiesInAntTour.clear()
-            chosenWeightsList.clear()
             currentWeight = 0.0
             currentVal = 0.0
             cummulativeValueList.clear()
@@ -140,7 +145,6 @@ def main():
                     currentWeight = currentWeight + weightList[val]
                     currentVal = currentVal + valueList[val]
                     citiesInAntTour.append(val)
-                    chosenWeightsList.append(weightList[val])
                 else:
                     break
 
@@ -155,7 +159,7 @@ def main():
             # Update pheromone after ant traversal
             pheromoneList = np.multiply(pheromoneList, 1-rho)
             for city in citiesInAntTour:
-                pheromoneList[city] = pheromoneList[city] + (m/np.sum(chosenWeightsList))
+                pheromoneList[city] = pheromoneList[city] + (m * currentVal /currentWeight)
 
             # Get the maximum value
             currentMax = max(currentMax, currentVal)
@@ -165,21 +169,21 @@ def main():
 
     print("Maximum value after all the interations:", np.max(maxValuesOfAllIters))
     
-    maxValuesAfter50Iterations = []
+    # Get maximum values after all the iterations
+    maxValuesAfterAllIterations = []
+    for i in range(len(cummulativeValueMatrix)):
+        maxValuesAfterAllIterations.append(cummulativeValueMatrix[i][-1])
 
-    for i in range(50):
-        maxValuesAfter50Iterations.append(cummulativeValueMatrix[i][-1])
+    print("Average value after all iterations:", np.average(maxValuesAfterAllIterations))
 
-    print("Average value after 50 iterations:", np.average(maxValuesAfter50Iterations))
-
-
+    # Uncomment to plot graph
     # Plot the graph
-    plt.title("Ant Colony Optimization")
-    plt.plot(range(len(maxValuesAfter50Iterations)), maxValuesAfter50Iterations, marker='o')
-    plt.xlabel("Number of Iterations",fontsize=18)
-    plt.ylabel("Maximum value of weights (Pounds)",fontsize=18)
-    plt.grid()
-    plt.show()  
+    #plt.title("Ant Colony Optimization")
+    #plt.plot(range(len(maxValuesAfterAllIterations)), maxValuesAfterAllIterations, marker='o')
+    #plt.xlabel("Number of Iterations",fontsize=18)
+    #plt.ylabel("Maximum value of weights (Pounds)",fontsize=18)
+    #plt.grid()
+    #plt.show()
 
     return
 
